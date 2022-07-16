@@ -1,0 +1,10 @@
+version: '2'
+services:
+  scc:
+    build: .
+    ports:
+      - "8008:8008"
+    environment:
+      - OBS_WS_HOST=localhost
+      - OBS_WS_PORT=4455
+      - OBS_WS_PASSWORD=quagmire

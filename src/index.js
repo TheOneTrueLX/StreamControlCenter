@@ -136,7 +136,7 @@ app.get('/capture/:source/:resolution', async (req, res) => {
         '1080p': { game: '>>> 1080p', capture: '*** Game Capture Device - 1080p' }
     }
     
-    if(captureSources.includes(req.params.source) && resolutions.includes(req.params.resolution) && (req.query.left || req.query.right || req.query.top || req.query.bottom)) {
+    if(['pc', 'console'].includes(req.params.source) && ['480p', '1080p'].includes(req.params.resolution) && (req.query.left || req.query.right || req.query.top || req.query.bottom)) {
         obs.call('GetSceneItemId', {
             sceneName: resolutions[req.params.resolution].game,
             sourceName: resolutions[req.params.resolution].capture,

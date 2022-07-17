@@ -2,6 +2,7 @@ version: '2'
 services:
   scc:
     build: .
+    restart: always
     ports:
       - "8008:8008"
     environment:

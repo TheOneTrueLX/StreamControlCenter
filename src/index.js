@@ -8,6 +8,9 @@ const OBSWebSocket = require('obs-websocket-js').default
 const bodyparser = require('body-parser')
 const net = require('net')
 const path = require('path')
+const ejs = require('ejs')
+const fs = require('fs')
+const nodeHtmlToImage = require('node-html-to-image')
 const { application } = require('express')
 const { allowedNodeEnvironmentFlags } = require('process')
 
@@ -82,9 +85,9 @@ app.use(bodyparser.json())
 app.use(bodyparser.urlencoded({ extended: false }))
 
 // Set up HTML templating
-app.engine('.html', require('ejs').__express)
+app.engine('.html', ejs.__express)
 app.set('views', path.join(__dirname, 'views'))
-app.use(express.static(path.join(__dirname, 'public')))
+app.use('/public', express.static(path.join(__dirname, 'public')))
 
 app.set('view engine', 'html')
 
@@ -213,6 +216,33 @@ app.get('/tweet', async (req, res) => {
         const tweet = /https\:\/\/twitter.com\/.*\/status\/(.*)/.exec(req.query.url)
         res.status(200).render('tweet', {
             tweetid: tweet[1]
+        })
+    } else {
+        res.status(400).send('400 Bad Request')
+    }
+})
+
+app.get('/gentweet', async (req, res) => {
+    if(req.query.url) {
+    
+        const tweet = /https\:\/\/twitter.com\/.*\/status\/(.*)/.exec(req.query.url)
+        const html = await ejs.renderFile(path.join(__dirname, 'views', 'tweet.html'), {
+            tweetid: tweet[1]
+        })
+        // 564 x 560
+        await nodeHtmlToImage({
+            output: path.join(__dirname, 'public', 'tweet.png'),
+            html: html,
+            transparent: true,
+            waitUntil: 'networkidle0',
+            selector: '#tweetContainer'
+        }).then(() => {
+            logger.info(`Successfully generated image for Tweet #${tweet[1]}`)
+            res.status(200).json({ status: 200, message: 'OK' })
+        }).catch((err) => {
+            logger.error(err.status)
+            logger.debug(err.stack)
+            res.status(500).json({ status: 500, message: 'Internal Server Error'})
         })
     } else {
         res.status(400).send('400 Bad Request')

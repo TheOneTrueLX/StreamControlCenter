@@ -6,6 +6,7 @@ WORKDIR /usr/src/app
 
 # install dependencies
 ADD . /usr/src/app
+RUN mkdir -p /usr/src/app/src/public
 RUN yarn && \
     yarn cache clean
 CMD [ "yarn", "start" ]

@@ -240,9 +240,8 @@ app.get('/gentweet', async (req, res) => {
             logger.info(`Successfully generated image for Tweet #${tweet[1]}`)
             res.status(200).json({ status: 200, message: 'OK' })
         }).catch((err) => {
-            logger.error(err.status)
-            logger.debug(err.stack)
-            res.status(500).json({ status: 500, message: 'Internal Server Error'})
+            logger.error(err)
+            res.status(500).json({ status: 500, message: 'Internal Server Error', error: err})
         })
     } else {
         res.status(400).send('400 Bad Request')

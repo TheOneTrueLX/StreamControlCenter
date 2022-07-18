@@ -3,9 +3,14 @@ services:
   scc:
     build: .
     restart: always
+    volumes:
+      - scc:/usr/src/app/src/public
     ports:
       - "8008:8008"
     environment:
       - OBS_WS_HOST=localhost
       - OBS_WS_PORT=4455
       - OBS_WS_PASSWORD=quagmire
+  
+  volumes:
+    scc:

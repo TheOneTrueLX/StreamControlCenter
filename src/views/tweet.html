@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body {
+        background-color: rgba(0, 0, 0, 0); 
+    }
+  </style>
+  <title>Twitter Embed</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>window.twttr = (function(d, s, id) {
+    var js, fjs = d.getElementsByTagName(s)[0],
+      t = window.twttr || {};
+    if (d.getElementById(id)) return t;
+    js = d.createElement(s);
+    js.id = id;
+    js.src = "https://platform.twitter.com/widgets.js";
+    fjs.parentNode.insertBefore(js, fjs);
+  
+    t._e = [];
+    t.ready = function(f) {
+      t._e.push(f);
+    };
+  
+    return t;
+  }(document, "script", "twitter-wjs"));
+
+  twttr.ready(function (twttr) {
+    twttr.widgets.createTweet(
+      '<%= tweetid %>',
+      document.getElementById('embedtweet'),
+      {
+        theme: 'dark',
+        conversation: 'none',
+        dnt: true
+      }
+    )
+  })
+  </script>
+</head>
+<body class="m-4">
+    <div class="p-4 bg-slate-800 rounded-lg w-[560px]">
+        <p class="font-bold text-white text-center text-4xl">LIKE & RETWEET</p>
+        <div id="embedtweet"></div>
+        <p class="font-bold text-white text-center text-xl">Click the link in chat</p>
+    </div>
+</body>
+</html>

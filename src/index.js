@@ -3,10 +3,13 @@ const express = require('express')
 const http = require('http')
 const pino = require('pino')
 const kasa = require('tplink-smarthome-api')
+const axios = require('axios')
 const OBSWebSocket = require('obs-websocket-js').default
 const bodyparser = require('body-parser')
 const net = require('net')
+const path = require('path')
 const { application } = require('express')
+const { allowedNodeEnvironmentFlags } = require('process')
 
 const app = express()
 
@@ -77,6 +80,13 @@ setTimeout(obsConnect, 5000)
 
 app.use(bodyparser.json())
 app.use(bodyparser.urlencoded({ extended: false }))
+
+// Set up HTML templating
+app.engine('.html', require('ejs').__express)
+app.set('views', path.join(__dirname, 'views'))
+app.use(express.static(path.join(__dirname, 'public')))
+
+app.set('view engine', 'html')
 
 app.use((err, req, res, next) => {
     logger.error(err.message)
@@ -195,6 +205,17 @@ app.get('/capture/:source/:resolution', async (req, res) => {
         })        
     } else {
         res.status(400).json({ status: 400, message: 'Bad Request' })
+    }
+})
+
+app.get('/tweet', async (req, res) => {
+    if(req.query.url) {
+        const tweet = /https\:\/\/twitter.com\/.*\/status\/(.*)/.exec(req.query.url)
+        res.status(200).render('tweet', {
+            tweetid: tweet[1]
+        })
+    } else {
+        res.status(400).send('400 Bad Request')
     }
 })
 

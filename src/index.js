@@ -13,6 +13,8 @@ const fs = require('fs')
 const nodeHtmlToImage = require('node-html-to-image')
 const { application } = require('express')
 const { allowedNodeEnvironmentFlags } = require('process')
+const { ClientCredentialsAuthProvider } = require('@twurple/auth')
+const { ApiClient } = require('@twurple/api')
 
 const app = express()
 
@@ -246,6 +248,21 @@ app.get('/gentweet', async (req, res) => {
     } else {
         res.status(400).send('400 Bad Request')
     }
+})
+
+app.get('/shoutout', async (req, res) => {
+    const authProvider = new ClientCredentialsAuthProvider(process.env.TWITCH_CLIENT_ID, process.env.TWITCH_CLIENT_SECRET)
+    const apiClient = new ApiClient({ authProvider })
+    const broadcaster = await apiClient.users.getUserByName(req.query.broadcaster)
+    const clip = await apiClient.clips.getClipsForBroadcaster(broadcaster, { limit: 5 })
+    const randomClip = Math.floor(Math.random() * 5) + 1
+
+    res.status(200).json({ 
+        embed_url: clip.data.length > 0 ? clip.data[randomClip - 1].embedUrl : null,
+        broadcaster: broadcaster.displayName,
+        profile_img: broadcaster.profilePictureUrl,
+        duration: clip.data.length > 0 ? clip.data[randomClip - 1].duration : null
+    })
 })
 
 app.all('*', (req, res) => {

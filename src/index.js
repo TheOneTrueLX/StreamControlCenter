@@ -139,32 +139,33 @@ app.get('/kvm', async (req, res) => {
     }
 })
 
-app.get('/capture/:source/:resolution', async (req, res) => {
+app.get('/capture/:source', async (req, res) => {
     // OBS capture source formatter
-    const captureSources = {
-        pc: '*** AverMedia Live Gamer 4K Device',
-        console: '*** AverMedia Live Gamer HD Device'
+
+    const crop = {
+        scene: '*** Game Capture',
+        source: '*** Game Capture Devices'
     }
 
-    const resolutions = {
-        '480p': { game: '>>> 480p', capture: '*** Game Capture Device - 480p' },
-        '1080p': { game: '>>> 1080p', capture: '*** Game Capture Device - 1080p' }
+    const capture = {
+        pc: '*** AvermMedia Live Gamer 4K Device',
+        console: '*** AverMedia Live Gamer HD Device'
     }
     
-    if(['pc', 'console'].includes(req.params.source) && ['480p', '1080p'].includes(req.params.resolution) && (req.query.left || req.query.right || req.query.top || req.query.bottom)) {
+    if(['pc', 'console'].includes(req.params.source) && (req.query.left || req.query.right || req.query.top || req.query.bottom)) {
         obs.call('GetSceneItemId', {
-            sceneName: resolutions[req.params.resolution].game,
-            sourceName: resolutions[req.params.resolution].capture,
+            sceneName: crop[scene],
+            sourceName: crop[source]
         }).then((response) => {
             Promise.all([
                 obs.call('GetSceneItemId', {
-                    sceneName: resolutions[req.params.resolution].capture,
-                    sourceName: '*** AverMedia Live Gamer 4K Device'
+                    sceneName: crop[source],
+                    sourceName: capture[req.params.source]
                 }).then((r) => {
                     obs.call('SetSceneItemEnabled', {
-                        sceneName: resolutions[req.params.resolution].capture,
+                        sceneName: crop[source],
                         sceneItemId: r.sceneItemId,
-                        sceneItemEnabled: captureSources[req.params.source] === '*** AverMedia Live Gamer 4K Device' ? true : false
+                        sceneItemEnabled: capture[req.params.source] === capture['pc'] ? true : false
                     })    
                 }).catch((err) => { 
                     logger.error(err.message)
@@ -179,7 +180,7 @@ app.get('/capture/:source/:resolution', async (req, res) => {
                     obs.call('SetSceneItemEnabled', {
                         sceneName: resolutions[req.params.resolution].capture,
                         sceneItemId: r.sceneItemId,
-                        sceneItemEnabled: captureSources[req.params.source] === '*** AverMedia Live Gamer HD Device' ? true : false
+                        sceneItemEnabled: captureSources[req.params.source] === capture['console'] ? true : false
                     })    
                 }).catch((err) => { 
                     logger.error(err.message)
@@ -188,7 +189,7 @@ app.get('/capture/:source/:resolution', async (req, res) => {
             ],
             [
                 obs.call('SetSceneItemTransform', {
-                    sceneName: resolutions[req.params.resolution].game,
+                    sceneName: crop[scene],
                     sceneItemId: response.sceneItemId,
                     sceneItemTransform: {
                         cropTop: Number(req.query.top),
@@ -211,6 +212,30 @@ app.get('/capture/:source/:resolution', async (req, res) => {
     } else {
         res.status(400).json({ status: 400, message: 'Bad Request' })
     }
+})
+
+app.get('/finetune/:direction/:operation', async (req, res) => {
+    obs.call('GetSceneItemId', {
+        sceneName: crop[scene],
+        sourceName: crop[source]
+    }).then((response) => {
+        obs.call('GetSceneItemTransform', {
+            sceneName: crop[scene],
+            sceneItemId: response.sceneItemId
+        }).then((r) => {
+            obs.call('SetSceneItemTransform', {
+                sceneName: crop[scene],
+                sceneItemId: response.sceneItemId,
+                sceneItemTransform: {
+                    [`crop${req.params.direction}`]: req.params.operation === 'increment' ? r.sceneItemTransform[`crop${req.params.direction}`] = r.sceneItemTransform[`crop${req.params.direction}`] + 1 : r.sceneItemTransform[`crop${req.params.direction}`] = r.sceneItemTransform[`crop${req.params.direction}`] - 1 
+                }
+            })
+        })
+    }).then(() => {
+        res.status(200).json({ status: 200, message: 'OK'})
+    }).catch((err) => {
+        res.status(500).json({ status: 500, message: 'Internal Service Error'})
+    })
 })
 
 app.get('/tweet', async (req, res) => {

@@ -154,16 +154,16 @@ app.get('/capture/:source', async (req, res) => {
     
     if(['pc', 'console'].includes(req.params.source) && (req.query.left || req.query.right || req.query.top || req.query.bottom)) {
         obs.call('GetSceneItemId', {
-            sceneName: crop[scene],
-            sourceName: crop[source]
+            sceneName: crop.scene,
+            sourceName: crop.source
         }).then((response) => {
             Promise.all([
                 obs.call('GetSceneItemId', {
-                    sceneName: crop[source],
+                    sceneName: crop.source,
                     sourceName: capture[req.params.source]
                 }).then((r) => {
                     obs.call('SetSceneItemEnabled', {
-                        sceneName: crop[source],
+                        sceneName: crop.source,
                         sceneItemId: r.sceneItemId,
                         sceneItemEnabled: capture[req.params.source] === capture['pc'] ? true : false
                     })    
@@ -189,7 +189,7 @@ app.get('/capture/:source', async (req, res) => {
             ],
             [
                 obs.call('SetSceneItemTransform', {
-                    sceneName: crop[scene],
+                    sceneName: crop.scene,
                     sceneItemId: response.sceneItemId,
                     sceneItemTransform: {
                         cropTop: Number(req.query.top),

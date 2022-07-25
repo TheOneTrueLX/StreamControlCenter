@@ -139,19 +139,20 @@ app.get('/kvm', async (req, res) => {
     }
 })
 
+const crop = {
+    scene: '*** Game Capture',
+    source: '*** Game Capture Devices'
+}
+
+const capture = {
+    pc: '*** AverMedia Live Gamer 4K Device',
+    console: '*** AverMedia Live Gamer HD Device'
+}
+
 app.get('/capture/:source', async (req, res) => {
     // OBS capture source formatter
 
-    const crop = {
-        scene: '*** Game Capture',
-        source: '*** Game Capture Devices'
-    }
 
-    const capture = {
-        pc: '*** AverMedia Live Gamer 4K Device',
-        console: '*** AverMedia Live Gamer HD Device'
-    }
-    
     try {
         if(['pc', 'console'].includes(req.params.source) && (req.query.left || req.query.right || req.query.top || req.query.bottom)) {
             
@@ -191,27 +192,43 @@ app.get('/capture/:source', async (req, res) => {
 })
 
 app.get('/finetune/:direction/:operation', async (req, res) => {
-    obs.call('GetSceneItemId', {
-        sceneName: crop[scene],
-        sourceName: crop[source]
-    }).then((response) => {
-        obs.call('GetSceneItemTransform', {
-            sceneName: crop[scene],
-            sceneItemId: response.sceneItemId
-        }).then((r) => {
-            obs.call('SetSceneItemTransform', {
-                sceneName: crop[scene],
-                sceneItemId: response.sceneItemId,
+    try {
+        const { sceneItemId: cropSourceId } = await obs.call('GetSceneItemId', { sceneName: crop.scene, sourceName: crop.source })
+        const { sceneItemTransform: cropTransform } = await obs.call('GetSceneItemTransform', { sceneName: crop.scene, sceneItemId: cropSourceId })
+    
+        
+        if(['top', 'left', 'bottom', 'right'].includes(req.params.direction) && ['increment', 'decrement'].includes(req.params.operation)) {
+
+            var newVal = cropTransform[ 'crop' + String(req.params.direction).charAt(0).toUpperCase() ]
+            switch(req.params.operation) {
+                case 'increment':
+                    newVal++
+                    break
+                
+                case 'decrement':
+                    newVal--
+                    break
+            }
+
+            await obs.call('SetSceneItemTransform', {
+                sceneName: crop.scene,
+                sceneItemId: cropSourceId,
                 sceneItemTransform: {
-                    [`crop${req.params.direction}`]: req.params.operation === 'increment' ? r.sceneItemTransform[`crop${req.params.direction}`] = r.sceneItemTransform[`crop${req.params.direction}`] + 1 : r.sceneItemTransform[`crop${req.params.direction}`] = r.sceneItemTransform[`crop${req.params.direction}`] - 1 
+                    [ 'crop' + String(req.params.direction).charAt(0).toUpperCase() ]: newVal
                 }
             })
-        })
-    }).then(() => {
-        res.status(200).json({ status: 200, message: 'OK'})
-    }).catch((err) => {
-        res.status(500).json({ status: 500, message: 'Internal Service Error'})
-    })
+
+            res.status(200).json({ status: 200, message: 'OK' })
+
+        } else {
+            res.status(400).json({ status: 400, message: 'Bad Request' })
+        }
+
+    } catch (err) {
+        logger.error(err.message)
+        logger.debug(err.stack)
+        res.status(500).json({ status: 500, message: 'Internal Server Error' })
+    }
 })
 
 app.get('/tweet', async (req, res) => {
@@ -249,7 +266,7 @@ app.get('/gentweet', async (req, res) => {
     } else {
         res.status(400).send('400 Bad Request')
     }
-})
+})+
 
 app.get('/shoutout', async (req, res) => {
     const authProvider = new ClientCredentialsAuthProvider(process.env.TWITCH_CLIENT_ID, process.env.TWITCH_CLIENT_SECRET)

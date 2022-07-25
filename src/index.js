@@ -161,10 +161,10 @@ app.get('/capture/:source', async (req, res) => {
             // Step 2: iterate through the capture object and toggle the scene items visible/invisible
             // based on the source param passed in the URL
             const { sceneItemId: pcSourceId } = await obs.call('GetSceneItemId', { sceneName: crop.source, sourceName: capture.pc })
-            await obs.call('SetSceneItemEnabled', { sceneName: crop.source, sceneItemId: pcSourceId, sceneItemEnabled: req.params.source === capture.pc ? true : false })
+            await obs.call('SetSceneItemEnabled', { sceneName: crop.source, sceneItemId: pcSourceId, sceneItemEnabled: req.params.source === "pc" ? true : false })
 
             const { sceneItemId: consoleSourceId } = await obs.call('GetSceneItemId', { sceneName: crop.source, sourceName: capture.console })
-            await obs.call('SetSceneItemEnabled', { sceneName: crop.source, sceneItemId: consoleSourceId, sceneItemEnabled: req.params.source === capture.console ? true : false })
+            await obs.call('SetSceneItemEnabled', { sceneName: crop.source, sceneItemId: consoleSourceId, sceneItemEnabled: req.params.source === "console" ? true : false })
  
             // Step 3: adjust the transform settings on the crop source sceneitem
             await obs.call('SetSceneItemTransform', { 

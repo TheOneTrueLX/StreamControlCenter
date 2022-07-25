@@ -148,69 +148,45 @@ app.get('/capture/:source', async (req, res) => {
     }
 
     const capture = {
-        pc: '*** AvermMedia Live Gamer 4K Device',
+        pc: '*** AverMedia Live Gamer 4K Device',
         console: '*** AverMedia Live Gamer HD Device'
     }
     
-    if(['pc', 'console'].includes(req.params.source) && (req.query.left || req.query.right || req.query.top || req.query.bottom)) {
-        obs.call('GetSceneItemId', {
-            sceneName: crop.scene,
-            sourceName: crop.source
-        }).then((response) => {
-            Promise.all([
-                obs.call('GetSceneItemId', {
-                    sceneName: crop.source,
-                    sourceName: capture[req.params.source]
-                }).then((r) => {
-                    obs.call('SetSceneItemEnabled', {
-                        sceneName: crop.source,
-                        sceneItemId: r.sceneItemId,
-                        sceneItemEnabled: capture[req.params.source] === capture['pc'] ? true : false
-                    })    
-                }).catch((err) => { 
-                    logger.error(err.message)
-                    logger.debug(err.stack)
-                })
-            ],
-            [
-                obs.call('GetSceneItemId', {
-                    sceneName: resolutions[req.params.resolution].capture,
-                    sourceName: '*** AverMedia Live Gamer HD Device'
-                }).then((r) => {
-                    obs.call('SetSceneItemEnabled', {
-                        sceneName: resolutions[req.params.resolution].capture,
-                        sceneItemId: r.sceneItemId,
-                        sceneItemEnabled: captureSources[req.params.source] === capture['console'] ? true : false
-                    })    
-                }).catch((err) => { 
-                    logger.error(err.message)
-                    logger.debug(err.stack)
-                })
-            ],
-            [
-                obs.call('SetSceneItemTransform', {
-                    sceneName: crop.scene,
-                    sceneItemId: response.sceneItemId,
-                    sceneItemTransform: {
-                        cropTop: Number(req.query.top),
-                        cropLeft: Number(req.query.left),
-                        cropRight: Number(req.query.right),
-                        cropBottom: Number(req.query.bottom)
-                    }
-                }).catch((err) => { 
-                    logger.error(err.message)
-                    logger.debug(err.stack)
-                })
-            ]).then(() => {
-                res.status(200).json({ status: 200, message: 'OK'})
-            }).catch((err) => {
-                res.status(503).json({ status: 503, message: 'Service Unavailable', error: err.message })
+    try {
+        if(['pc', 'console'].includes(req.params.source) && (req.query.left || req.query.right || req.query.top || req.query.bottom)) {
+            
+            // Step 1: get the scene ID for the game capture devices source
+            const { sceneItemId: cropSourceId } = await obs.call('GetSceneItemId', { sceneName: crop.scene, sourceName: crop.source})
+
+            // Step 2: iterate through the capture object and toggle the scene items visible/invisible
+            // based on the source param passed in the URL
+            const { sceneItemId: pcSourceId } = await obs.call('GetSceneItemId', { sceneName: crop.source, sourceName: capture.pc })
+            await obs.call('SetSceneItemEnabled', { sceneName: crop.source, sceneItemId: pcSourceId, sceneItemEnabled: req.params.source === capture.pc ? true : false })
+
+            const { sceneItemId: consoleSourceId } = await obs.call('GetSceneItemId', { sceneName: crop.source, sourceName: capture.console })
+            await obs.call('SetSceneItemEnabled', { sceneName: crop.source, sceneItemId: consoleSourceId, sceneItemEnabled: req.params.source === capture.console ? true : false })
+ 
+            // Step 3: adjust the transform settings on the crop source sceneitem
+            await obs.call('SetSceneItemTransform', { 
+                sceneName: crop.scene,
+                sceneItemId: cropSourceId,
+                sceneItemTransform: {
+                    cropTop: Number(req.query.top) || 0,
+                    cropBottom: Number(req.query.bottom) || 0,
+                    cropLeft: Number(req.query.left) || 0,
+                    cropRight: Number(req.query.right) || 0
+                }
             })
-        }).catch((err) => {
-            res.status(500).json({ status: 500, message: 'Internal Service Error'})
-        })        
-    } else {
-        res.status(400).json({ status: 400, message: 'Bad Request' })
+    
+            res.status(200).json({ status: 200, message: 'OK' })
+       
+        } else {
+            res.status(400).json({ status: 400, message: 'Bad Request' })
+        }    
+    } catch (err) {
+        logger.error(err.message)
+        logger.debug(err.stack)
+        res.status(500).json({ status: 500, message: 'Internal Service Error'})
     }
 })
 

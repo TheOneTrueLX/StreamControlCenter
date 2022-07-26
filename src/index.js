@@ -10,11 +10,14 @@ const net = require('net')
 const path = require('path')
 const ejs = require('ejs')
 const fs = require('fs')
+const { Server } = require('socket.io')
 const nodeHtmlToImage = require('node-html-to-image')
 const { application } = require('express')
 const { allowedNodeEnvironmentFlags } = require('process')
 const { ClientCredentialsAuthProvider } = require('@twurple/auth')
+const sqlite3 = require('sqlite3')
 const { ApiClient } = require('@twurple/api')
+const { ChatClient } = require('@twurple/chat')
 
 const app = express()
 
@@ -34,6 +37,25 @@ const kasaDevices = [
 ]
 
 const kvmSwitch = { ip: '192.168.1.239', port: 5000 }
+
+const DBSOURCE = 'db.sqlite'
+const db = new sqlite3.Database(DBSOURCE, (err) => {
+    if(err) {
+        logger.error(err.message)
+        logger.debug(err.stack)
+        throw err
+    } else {
+        db.run(`CREATE TABLE user_cache (
+            username text,
+            displayname text,
+            profile_image_url text
+        )`, (err) => {
+            if(err) {
+                logger.warn(`Detected existing user cache database`)               
+            }
+        })
+    }
+})
 
 function obsConnect() {
     obs.connect(`ws://${process.env.OBS_WS_HOST}:${process.env.OBS_WS_PORT}`, process.env.OBS_WS_PASSWORD)
@@ -151,8 +173,6 @@ const capture = {
 
 app.get('/capture/:source', async (req, res) => {
     // OBS capture source formatter
-
-
     try {
         if(['pc', 'console'].includes(req.params.source) && (req.query.left || req.query.right || req.query.top || req.query.bottom)) {
             
@@ -266,11 +286,12 @@ app.get('/gentweet', async (req, res) => {
     } else {
         res.status(400).send('400 Bad Request')
     }
-})+
+})
+
+const authProvider = new ClientCredentialsAuthProvider(process.env.TWITCH_CLIENT_ID, process.env.TWITCH_CLIENT_SECRET)
+const apiClient = new ApiClient({ authProvider })
 
 app.get('/shoutout', async (req, res) => {
-    const authProvider = new ClientCredentialsAuthProvider(process.env.TWITCH_CLIENT_ID, process.env.TWITCH_CLIENT_SECRET)
-    const apiClient = new ApiClient({ authProvider })
     const broadcaster = await apiClient.users.getUserByName(req.query.broadcaster)
     const clip = await apiClient.clips.getClipsForBroadcaster(broadcaster, { limit: 5 })
     const randomClip = Math.floor(Math.random() * 5) + 1
@@ -283,10 +304,82 @@ app.get('/shoutout', async (req, res) => {
     })
 })
 
+const chatClient = new ChatClient({ channels: ['theonetruelx'] })
+
+app.get('/chatoverlay', (req, res) => {
+    if(!chatClient.isConnected) {
+        logger.info('Connecting to Twitch chat...')
+        setTimeout(twitchChatConnect, 5000)
+    }
+    res.status(200).render('chat')
+})
+
 app.all('*', (req, res) => {
     // 404 catch-all
     res.status(404).json({ status: 404, message: 'Not Found' })
 })
 
 const httpServer = http.createServer(app)
+const io = new Server(httpServer)
+
+// the docs allege that by not passing an authProvider, the 
+// chat client 
+
+function twitchChatConnect() {
+    chatClient.connect().then(() => {
+        logger.info('Connected to Twitch chat channel #theonetruelx')
+    }).catch((err) => {
+        logger.error(err.message)
+        logger.debug(err.stack)
+    })
+}
+
+chatClient.onDisconnect((manually, reason) => {
+    if(!manually) {
+        logger.error(`Disconnected from Twitch chat... reconnecting in 5 seconds...`)
+        setTimeout(twitchChatConnect, 5000)
+    } else {
+        logger.warn('Disconnecting from Twitch Chat (expected)')
+    }
+})
+
+io.on('connection', (socket) => {
+    logger.info('[socket.io] chat overlay connected')
+
+    chatClient.onMessage(async (channel, user, message, msg) => {
+        // check for cached chat user record
+        db.get('SELECT * FROM user_cache WHERE username=$username', {
+            $username: user
+        }, async (err, row) => {
+
+            if(err) {
+                logger.error(err.message)
+                logger.debug(err.stack)
+            }
+            
+            if(!row) {
+                // if we got here, the chat user isn't cached.  We cache it here.
+                const twitchUser = await apiClient.users.getUserByName(user)
+                db.run('INSERT INTO user_cache VALUES($username, $displayname, $profile_image_url)', {
+                    $username: user,
+                    $displayname: twitchUser.displayName,
+                    $profile_image_url: twitchUser.profilePictureUrl
+                })
+
+                // emit the results from the Twitch API call to the chat overlay
+                socket.emit('chatMsg', { user: twitchUser.displayName, profile: twitchUser.profile_img_url, message: message })
+            } else {
+                // emit the results from the database to the chat overlay
+                socket.emit('chatMsg', { user: row.displayname, profile: row.profile_image_url, message: message})
+            }   
+        })
+    })
+
+    socket.on('disconnect', (reason) => {
+        // TODO: we might be able to make this more selective
+        // see: https://socket.io/docs/v4/server-api/#event-disconnect
+        chatClient.quit()
+    })
+})
+
 httpServer.listen(8008)

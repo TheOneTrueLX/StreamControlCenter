@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body {
+        background-color: rgba(0, 0, 0, 0); 
+        color: #ffffff;
+    }
+
+    @keyframes fadeInOut {
+      0% {
+        opacity: 0;
+      }
+      5%, 90% {
+        opacity: 1;
+      }
+      100% {
+        opacity: 0;
+        display: none;
+      }
+    }
+
+    .fade { 
+      animation: fadeInOut 10s ease-in-out 0s forwards;
+    }
+
+  </style>
+  <title>Chat Overlay</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.js"></script>
+  <script>
+    // left-aligned chat
+    var socket = io();
+
+    $(document).ready(function() {
+      socket.on("chatMsg", (args) => {
+
+        $("#chatContainer").append(`
+        <div id="chatMsg" class="fade ml-4 mt-4 w-fit grid grid-cols-1 justify-items-start">
+          <div class="rounded-full bg-amber-300 px-2 py-0 w-fit flex justify-center items-center">
+            <img class="rounded-full inline-block w-[16px] h-[16px]" src="${args.profile}">&nbsp;<div class="inline-block text-black font-bold text-sm">${args.user}</div>
+          </div>
+          <div class="ml-8 border-l-4 border-b-4 rounded-bl-lg border-amber-300 px-6 py-1 w-fit max-w-md text-sm">${args.message}</div>
+        </div>    
+        `);
+      });
+    });
+  </script>
+</head>
+<body>
+  <div id="chatContainer" class="h-screen grid grid-cols-1 content-end pb-2"></div>
+</body>
+</html>

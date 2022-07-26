@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <style>
     body {
-        background-color: rgba(0, 0, 0, 1); 
+        background-color: rgba(0, 0, 0, 0); 
         color: #ffffff;
     }
 
@@ -32,25 +32,25 @@
   <script src="/socket.io/socket.io.js"></script>
   <script src="https://code.jquery.com/jquery-3.6.0.js"></script>
   <script>
+    // right-aligned chat
     var socket = io();
 
     $(document).ready(function() {
       socket.on("chatMsg", (args) => {
-        // <p>${args.user}: ${args.message}</p>
+
         $("#chatContainer").append(`
-          <div id="chatMsg" class="fade ml-4 mt-4 w-fit">
-            <div class="rounded-full bg-amber-300 p-1 pr-4 w-fit">
-              <img class="rounded-full inline-block align-middle" width=32 height=32 src="${args.profile}">&nbsp;<div class="inline-block align-middle text-black font-bold">${args.user}</div>
-            </div>
-            <div class="ml-8 border-l-4 border-b-4 rounded-bl-lg border-amber-300 px-6 py-2 w-fit max-w-md">${args.message}</div>
+        <div id="chatMsg" class="fade mr-4 mt-4 w-fit grid grid-cols-1 justify-items-end">
+          <div class="rounded-full bg-amber-300 px-2 py-0 w-fit flex justify-center items-center">
+            <img class="rounded-full inline-block w-[16px] h-[16px]" src="${args.profile}">&nbsp;<div class="inline-block text-black font-bold text-sm">${args.user}</div>
           </div>
+          <div class="mr-8 border-r-4 border-b-4 rounded-br-lg border-amber-300 px-6 py-1 w-fit max-w-md text-sm">${args.message}</div>
+        </div>    
         `);
       });
     });
   </script>
 </head>
 <body>
-  <div id="chatContainer" class="h-screen grid grid-cols-1 content-end pb-2">
-  </div>
+  <div id="chatContainer" class="h-screen w-screen grid grid-cols-1 content-end pb-2 justify-items-end"></div>
 </body>
 </html>

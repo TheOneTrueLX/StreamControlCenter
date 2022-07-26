@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <style>
     body {
-        background-color: rgba(0, 0, 0, 0); 
-        color: #ffffff;
+        background-color: rgba(0, 0, 0, 1a); 
+        color: #000000;
     }
 
     @keyframes fadeInOut {
@@ -56,7 +56,7 @@
           <div class="rounded-full bg-amber-300 px-2 py-0 w-fit flex justify-center items-center">
             <img class="rounded-full inline-block w-[16px] h-[16px]" src="${args.profile}">&nbsp;<div class="inline-block text-black font-bold text-sm">${args.user}</div>
           </div>
-          <div class="ml-8 border-l-4 border-b-4 rounded-bl-lg border-amber-300 px-6 py-1 w-fit max-w-md text-sm">${args.message}</div>
+          <div class="ml-8 border rounded-lg rounded-tl-none border-amber-300 bg-white opacity-50 px-4 py-1 w-fit max-w-md text-sm">${args.message}</div>
         </div>    
         `);
       });

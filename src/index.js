@@ -393,7 +393,9 @@ const chatClient = new ChatClient({ channels: ['theonetruelx'] })
 // Renders and displays the chat overlay.  No real magic going on here... that all
 // happens below in the socket.io event handler.
 app.get('/chatoverlay', (req, res) => {
-    res.status(200).render(`chat-${req.query.align || 'left'}`)
+    res.status(200).render(`chat-${req.query.align || 'left'}`, {
+        nofade: req.query.nofade || false
+    })
 })
 
 app.all('*', (req, res) => {

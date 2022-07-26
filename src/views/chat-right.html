@@ -22,8 +22,21 @@
       }
     }
 
+    @keyframes fadeIn {
+      0% {
+        opacity: 0;
+      }
+      5%, 100% {
+        opacity: 1;
+      }
+    }
+
     .fade { 
       animation: fadeInOut 10s ease-in-out 0s forwards;
+    }
+
+    .fade-in {
+      animation: fadeIn 10s ease-in 0s forwards;
     }
 
   </style>
@@ -39,7 +52,7 @@
       socket.on("chatMsg", (args) => {
 
         $("#chatContainer").append(`
-        <div id="chatMsg" class="fade mr-4 mt-4 w-fit grid grid-cols-1 justify-items-end">
+        <div id="chatMsg" class="<% if(nofade){ %>fade-in <% }else{ %>fade <% } %>mr-4 mt-4 w-fit grid grid-cols-1 justify-items-end">
           <div class="rounded-full bg-amber-300 px-2 py-0 w-fit flex justify-center items-center">
             <img class="rounded-full inline-block w-[16px] h-[16px]" src="${args.profile}">&nbsp;<div class="inline-block text-black font-bold text-sm">${args.user}</div>
           </div>

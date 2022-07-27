@@ -390,11 +390,18 @@ app.get('/shoutout', async (req, res) => {
 
 const chatClient = new ChatClient({ channels: ['theonetruelx'] })
 
-// Renders and displays the chat overlay.  No real magic going on here... that all
-// happens below in the socket.io event handler.
-app.get('/chatoverlay', (req, res) => {
-    res.status(200).render(`chat-${req.query.align || 'left'}`, {
-        nofade: req.query.nofade || false
+// renders the overlay page, which is intended to be used for chat, 
+// shoutouts, and pretty much any other stupid ideas I may 
+// come up with in the future
+app.get('/overlay', (req, res) => {
+    res.status(200).render('overlay', {
+        align: req.query.align || 'left',
+        nofade: req.query.nofade || "false",
+        chattop: req.query.chattop || 0,
+        chatleft: req.query.chatleft || 0,
+        chatwidth: req.query.chatwidth || 1920,
+        chatheight: req.query.chatheight || 1080,
+        chatguide: req.query.chatguide || "false",
     })
 })
 

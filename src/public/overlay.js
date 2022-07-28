@@ -33,7 +33,7 @@ function shoutOut(args) {
             <div class="z-10 absolute bg-transparent ml-[50px] min-w-fit max-w-full">
                 <iframe
                     class="border-amber-400 border-4"
-                    src="${args.embed_url}&parent=localhost&parent=kogasa.t0xic.com0&preload=auto&autoplay=true"
+                    src="${args.embed_url}&parent=localhost&parent=kogasa.t0xic.com&preload=auto&autoplay=true"
                     height="180"
                     width="320"
                 ></iframe>

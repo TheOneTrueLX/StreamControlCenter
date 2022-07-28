@@ -518,4 +518,4 @@ io.on('connection', (socket) => {
 })
 
 // fire this fucker up and start listening for requests
-httpServer.listen(8008)
+httpServer.listen(process.env.NODE_ENV == 'development' ? 8008 : 443)

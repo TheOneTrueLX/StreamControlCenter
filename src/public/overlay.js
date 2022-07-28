@@ -30,7 +30,7 @@ function shoutOut(args) {
     //       Right now, they'll just stack, which could be hilariously scuffed.
     $("#shoutOutOverlay").append(`
         <div class="slide absolute left-[-1000px] top-[100px] min-w-fit max-w-full" style="--duration: ${args.duration + 2}s">
-            <div class="z-10 absolute bg-white ml-[50px] min-w-fit max-w-full">
+            <div class="z-10 absolute bg-transparent ml-[50px] min-w-fit max-w-full">
                 <iframe
                     class="border-amber-400 border-4"
                     src="${args.embed_url}&parent=localhost&parent=kogasa.t0xic.com0&preload=auto&autoplay=true"

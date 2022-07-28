@@ -1,6 +1,6 @@
 require('dotenv').config()
 const express = require('express')
-const http = require('https')
+const http = require('http')
 const pino = require('pino')
 const kasa = require('tplink-smarthome-api')
 const OBSWebSocket = require('obs-websocket-js').default
@@ -426,10 +426,7 @@ app.all('*', (req, res) => {
     res.status(404).json({ status: 404, message: 'Not Found' })
 })
 
-const httpServer = http.createServer({
-    key: fs.readFileSync('etc/scc.key'),
-    cert: fs.readFileSync('etc/scc.crt')
-}, app)
+const httpServer = http.createServer(app)
 
 const io = new Server(httpServer)
 
@@ -518,4 +515,4 @@ io.on('connection', (socket) => {
 })
 
 // fire this fucker up and start listening for requests
-httpServer.listen(process.env.NODE_ENV == 'development' ? 8008 : 443)
+httpServer.listen(8008)

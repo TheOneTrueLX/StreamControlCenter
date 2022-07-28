@@ -1,6 +1,6 @@
 require('dotenv').config()
 const express = require('express')
-const http = require('http')
+const http = require('https')
 const pino = require('pino')
 const kasa = require('tplink-smarthome-api')
 const OBSWebSocket = require('obs-websocket-js').default
@@ -16,6 +16,8 @@ const { ClientCredentialsAuthProvider } = require('@twurple/auth')
 const sqlite3 = require('sqlite3')
 const { ApiClient } = require('@twurple/api')
 const { ChatClient } = require('@twurple/chat')
+const fs = require('fs')
+const morgan = require('morgan')
 // ^-- and somehow it grew to this
 
 const app = express()
@@ -26,6 +28,8 @@ const logger = pino({
     },
     timestamp: () => `,"time":"${new Date(Date.now()).toISOString()}"`,
 })
+
+app.use(morgan('dev'))
 
 // create global instances of kasa and obs-websocket clients
 const kasaClient = new kasa.Client()
@@ -422,7 +426,11 @@ app.all('*', (req, res) => {
     res.status(404).json({ status: 404, message: 'Not Found' })
 })
 
-const httpServer = http.createServer(app)
+const httpServer = http.createServer({
+    key: fs.readFileSync('etc/scc.key'),
+    cert: fs.readFileSync('etc/scc.crt')
+}, app)
+
 const io = new Server(httpServer)
 
 // Helper function to connect to the Twitch chat API.

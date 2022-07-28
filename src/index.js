@@ -376,16 +376,28 @@ const apiClient = new ApiClient({ authProvider })
 
 // Just ignore this.  I'm not using it and it'll be going away soon.
 app.get('/shoutout', async (req, res) => {
-    const broadcaster = await apiClient.users.getUserByName(req.query.broadcaster)
-    const clip = await apiClient.clips.getClipsForBroadcaster(broadcaster, { limit: 5 })
-    const randomClip = Math.floor(Math.random() * 5) + 1
+    try{ 
+        const broadcaster = await apiClient.users.getUserByName(req.query.broadcaster)
+        if(broadcaster) {
 
-    res.status(200).json({ 
-        embed_url: clip.data.length > 0 ? clip.data[randomClip - 1].embedUrl : null,
-        broadcaster: broadcaster.displayName,
-        profile_img: broadcaster.profilePictureUrl,
-        duration: clip.data.length > 0 ? clip.data[randomClip - 1].duration : null
-    })
+            const clip = await apiClient.clips.getClipsForBroadcaster(broadcaster, { limit: 5 })
+            const randomClip = Math.floor(Math.random() * 5) + 1
+
+            io.sockets.emit('shoutout', {
+                embed_url: clip.data.length > 0 ? clip.data[randomClip - 1].embedUrl : null,
+                broadcaster: broadcaster.displayName,
+                profile_img: broadcaster.profilePictureUrl,
+                duration: clip.data.length > 0 ? clip.data[randomClip - 1].duration : null
+            })
+            res.status(200).json({ status: 200, message: 'OK'})
+        } else {
+            res.status(404).json({ status: 404, message: 'Not Found'})
+        }
+    } catch (err) {
+        logger.error(err.message)
+        logger.debug(err.stack)
+        res.status(500).json({ status: 500, message: 'Internal Server Error'})
+    }
 })
 
 const chatClient = new ChatClient({ channels: ['theonetruelx'] })

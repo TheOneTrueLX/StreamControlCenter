@@ -25,6 +25,18 @@ body {
   }
 }
 
+@keyframes slideInOut {
+  0% {
+    left: -1000px;
+  }
+  2%,98% {
+    left: 0px;
+  }
+  100% {
+    left: -1000px;
+  }
+}
+
 .fade { 
   animation: fadeInOut 10s ease-in-out 0s forwards;
 }
@@ -32,3 +44,8 @@ body {
 .fade-in {
   animation: fadeIn 10s ease-in 0s forwards;
 }
+
+.slide {
+  animation: slideInOut var(--duration) ease-in-out 0s forwards;
+}
+

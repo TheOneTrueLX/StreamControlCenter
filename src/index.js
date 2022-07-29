@@ -18,6 +18,7 @@ const { ApiClient } = require('@twurple/api')
 const { ChatClient } = require('@twurple/chat')
 const fs = require('fs')
 const morgan = require('morgan')
+const { EmoteFetcher, Channel } = require('@mkody/twitch-emoticons')
 // ^-- and somehow it grew to this
 
 const app = express()
@@ -61,7 +62,8 @@ const db = new sqlite3.Database(DBSOURCE, (err) => {
         db.run(`CREATE TABLE user_cache (
             username text,
             displayname text,
-            profile_image_url text
+            profile_image_url text,
+            user_color text
         )`, (err) => {
             if(err) {
                 logger.warn(`Detected existing user cache database`)               
@@ -378,7 +380,8 @@ app.get('/gentweet', async (req, res) => {
 const authProvider = new ClientCredentialsAuthProvider(process.env.TWITCH_CLIENT_ID, process.env.TWITCH_CLIENT_SECRET)
 const apiClient = new ApiClient({ authProvider })
 
-// Just ignore this.  I'm not using it and it'll be going away soon.
+// This is intended to be hit by some outside force (in my case, Mixitup bot) to trigger
+// the shoutout animation.  The Twitch username gets passed via the "broadcaster" query option.
 app.get('/shoutout', async (req, res) => {
     try{ 
         const broadcaster = await apiClient.users.getUserByName(req.query.broadcaster)
@@ -403,6 +406,12 @@ app.get('/shoutout', async (req, res) => {
         res.status(500).json({ status: 500, message: 'Internal Server Error'})
     }
 })
+
+app.get('/raid', async (req, res) => {
+    
+})
+
+
 
 const chatClient = new ChatClient({ channels: ['theonetruelx'] })
 
@@ -454,6 +463,26 @@ chatClient.onDisconnect((manually, reason) => {
     }
 })
 
+// I stole this shit
+function colorCalc(bgColor, lightColor, darkColor) {
+    var color = (bgColor.charAt(0) === '#') ? bgColor.substring(1, 7) : bgColor;
+    var r = parseInt(color.substring(0, 2), 16); // hexToR
+    var g = parseInt(color.substring(2, 4), 16); // hexToG
+    var b = parseInt(color.substring(4, 6), 16); // hexToB
+    var uicolors = [r / 255, g / 255, b / 255];
+    var c = uicolors.map((col) => {
+        if (col <= 0.03928) {
+            return col / 12.92;
+        }
+        return Math.pow((col + 0.055) / 1.055, 2.4);
+    });
+    var L = (0.2126 * c[0]) + (0.7152 * c[1]) + (0.0722 * c[2]);
+    return (L > 0.179) ? darkColor : lightColor;
+}
+
+const emoteFetcher = new EmoteFetcher(process.env.TWITCH_CLIENT_ID, process.env.TWITCH_CLIENT_SECRET)
+const bttvChannel = new Channel(emoteFetcher, process.env.TWITCH_BROADCASTER_ID)
+
 // This even fires on every new socket.io connection from the
 // chat overlay page.
 io.on('connection', (socket) => {
@@ -466,10 +495,35 @@ io.on('connection', (socket) => {
         setTimeout(twitchChatConnect, 5000)
     }
 
-    chatClient.onMessage(async (channel, user, message, msg) => {
-        // read the input from the chat API and process the message.
+    chatClient.onPrivmsg(async (channel, user, message, msg) => {
+        // first thing first, we need to parse the message for emotes
+        const parsedMessage = msg.parseEmotesAndBits(await apiClient.bits.getCheermotes(process.env.TWITCH_BROADCASTER_ID), { background: 'dark', scale: '1', state: 'animated' })
 
-        // first, let's check for a cached user in the database
+        var resultMsg = []
+        for (const part of parsedMessage) {
+            if(part.type == "text") {
+                // TODO: we'll have to parse these manually for BTTV/FFZ emotes
+                const emoteCollection = await bttvChannel.fetchBTTVEmotes()
+                const emote = emoteCollection.get(part.text.trim())
+ 
+                if(emote) {
+                    resultMsg.push(`<img class="inline" width=24 height=24 src="https://cdn.betterttv.net/emote/${emote.id}/1x" />`)
+                } else {
+                    resultMsg.push(part.text.trim())
+                }
+            }
+            if(part.type == "emote") {
+                resultMsg.push(`<img class="inline" width=24 height=24 src="${ part.displayInfo.getUrl({ animationSettings: 'default', backgroundType: 'dark', size: '1.0' })}" />`)
+            }
+            if(part.type == "cheer") {
+                resultMsg.push(`<img class="inline" width=24 height=24 src="${ part.displayInfo.url }" /><span style="color: ${part.displayInfo.color}">${ part.displayInfo.amount }</span>`)
+            }
+        }
+
+        chatMsg = resultMsg.join(' ')
+    
+        // read the input from the chat API and process the message.
+        // let's check for a cached user in the database
         db.get('SELECT * FROM user_cache WHERE username=$username', {
             $username: user
         }, async (err, row) => {
@@ -485,17 +539,18 @@ io.on('connection', (socket) => {
                 // if we got this far, the chat user isn't cached, so
                 // we'll insert a record containing the stuff we want to cache
                 const twitchUser = await apiClient.users.getUserByName(user)
-                db.run('INSERT INTO user_cache VALUES($username, $displayname, $profile_image_url)', {
+                db.run('INSERT INTO user_cache VALUES($username, $displayname, $profile_image_url, $user_color)', {
                     $username: user,
-                    $displayname: twitchUser.displayName,
-                    $profile_image_url: twitchUser.profilePictureUrl
+                    $displayname: msg.userInfo.displayName,
+                    $profile_image_url: twitchUser.profilePictureUrl,
+                    $user_color: msg.userInfo.color || "#" + (Math.floor(Math.random() * 2 ** 24)).toString(16).padStart(0, 6)
                 })
 
                 // emit the results from the Twitch API call to the chat overlay
-                socket.emit('chatMsg', { user: twitchUser.displayName, profile: twitchUser.profile_img_url, message: message })
+                socket.emit('chatMsg', { msgid: msg.id, user: twitchUser.displayName, bg_color: msg.userInfo.color, fg_color: colorCalc(msg.userInfo.color, "#FFFFFF", "#000000"), profile: twitchUser.profilePictureUrl, message: chatMsg })
             } else {
                 // emit the results from the database to the chat overlay
-                socket.emit('chatMsg', { user: row.displayname, profile: row.profile_image_url, message: message})
+                socket.emit('chatMsg', { msgid: msg.id, user: row.displayname, bg_color: row.user_color, fg_color: colorCalc(row.user_color, "#FFFFFF", "#000000"), profile: row.profile_image_url, message: chatMsg })
             }   
         })
     })

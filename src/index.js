@@ -480,9 +480,6 @@ function colorCalc(bgColor, lightColor, darkColor) {
     return (L > 0.179) ? darkColor : lightColor;
 }
 
-const emoteFetcher = new EmoteFetcher(process.env.TWITCH_CLIENT_ID, process.env.TWITCH_CLIENT_SECRET)
-const bttvChannel = new Channel(emoteFetcher, process.env.TWITCH_BROADCASTER_ID)
-
 // This even fires on every new socket.io connection from the
 // chat overlay page.
 io.on('connection', (socket) => {
@@ -502,15 +499,34 @@ io.on('connection', (socket) => {
         var resultMsg = []
         for (const part of parsedMessage) {
             if(part.type == "text") {
-                // TODO: we'll have to parse these manually for BTTV/FFZ emotes
-                const emoteCollection = await bttvChannel.fetchBTTVEmotes()
-                const emote = emoteCollection.get(part.text.trim())
- 
-                if(emote) {
-                    resultMsg.push(`<img class="inline" width=24 height=24 src="https://cdn.betterttv.net/emote/${emote.id}/1x" />`)
-                } else {
-                    resultMsg.push(part.text.trim())
+                // The BTTV API is actual fucking dogshit, so fuck them I'll do it myself...
+                const emoteCollection = {
+                    catJAM: '5f1b0186cf6d2144653d2970',
+                    lickR: '5afdd149b5f610729e2f6e75',
+                    lickL: '5afdd15ab5f610729e2f6e7a',
+                    miyanoHype: '588763bbafc2ff756c3f4c26',
+                    ThisIsFine: '5e2914861df9195f1a4cd411',
+                    RainbowPls: '5de3bdeb60bd0702dc511397',
+                    popCat: '5fa8f232eca18f6455c2b2e1',
+                    ratJAM: '5f43037db2efd65d77e8a88f',
+                    POGGERS: '58ae8407ff7b7276f8e594f2',
+                    KEKW: '5ea831f074046462f768097a',
+                    monkaS: '56e9f494fff3cc5c35e5287e',
+                    peepoNaruto: '5e1c1b51bca2995f13fb5bc3',
+                    ModCheck: '60919ee239b5010444d0b958',
+                    Glizzy: '5fd390bcf534b2348746cb1d',
+                    YoinkySploinky: '605bea897493072efdeb407f'
                 }
+
+                var partArray = part.text.trim().split(' ')
+                partArray.forEach((word, index) => {
+                    const emote = emoteCollection[word]
+                    if(emote) {
+                        partArray[index] = `<img class="inline" width=24 height=24 src="https://cdn.betterttv.net/emote/${emote}/1x" />`
+                    }
+                })
+
+                resultMsg.push(partArray.join(' '))
             }
             if(part.type == "emote") {
                 resultMsg.push(`<img class="inline" width=24 height=24 src="${ part.displayInfo.getUrl({ animationSettings: 'default', backgroundType: 'dark', size: '1.0' })}" />`)
